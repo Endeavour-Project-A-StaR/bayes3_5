@@ -11,6 +11,62 @@ FltData_t fltdata;              // Init shared flight data struct
 uint32_t last_loop_time = 0;
 uint32_t last_print_time = 0;
 
+void print_telem()
+{
+  if ((state == STATE_OVRD || state == STATE_PREFLT) && (millis() - last_print_time >= 50))
+  {
+    last_print_time = millis();
+
+    static char ser_buf[4096];
+
+    int len = serializer(ser_buf, sizeof(ser_buf), millis(), state, &fltdata);
+
+    if (len > 0 && len < sizeof(ser_buf))
+      Serial.println(ser_buf);
+  }
+}
+
+void command_parser()
+{
+  if (Serial.available())
+  {
+    char c = Serial.read();
+    if (state == STATE_NAVLK || state == STATE_BURN || state == STATE_COAST || state == STATE_RECVY)
+    {
+      if (c == 'O' || c == 'P' || c == 'A')
+      {
+        Serial.println("COMMAND IGNORED IN FLT LOCKOUT");
+      }
+    }
+    else
+    {
+
+      switch (c)
+      {
+      case 'A':
+        state = STATE_NAVLK;
+        nav_rst_integral();
+        Serial.println("------ GUIDANCE IS INTERNAL ------");
+        break;
+
+      case 'O':
+        state = STATE_OVRD;
+        nav_rst_integral();
+        Serial.println("------ OVRD MODE ------");
+        break;
+
+      case 'P':
+        state = STATE_PREFLT;
+        Serial.println("------ REVERTED TO PREFLT ------");
+        break;
+
+      default:
+        break;
+      }
+    }
+  }
+}
+
 void setup()
 {
 
@@ -126,49 +182,13 @@ void loop()
         break;
       }
 
-      if ((state == STATE_OVRD || state == STATE_PREFLT) && (millis() - last_print_time >= 50))
-      {
-        last_print_time = millis();
-
-        static char ser_buf[4096];
-
-        int len = serializer(ser_buf, sizeof(ser_buf), millis(), state, &fltdata);
-
-        if (len > 0 && len < sizeof(ser_buf))
-          Serial.println(ser_buf);
-      }
+      print_telem();
     }
     else
     {
       Serial.println("IMU READ FAIL");
     }
-
-    if (Serial.available())
-    {
-
-      char c = Serial.read();
-      switch (c)
-      {
-      case 'A':
-        state = STATE_NAVLK;
-        nav_rst_integral();
-        Serial.println("------ GUIDANCE IS INTERNAL ------");
-        break;
-
-      case 'O':
-        state = STATE_OVRD;
-        nav_rst_integral();
-        Serial.println("------ OVRD MODE ------");
-        break;
-
-      case 'P':
-        state = STATE_PREFLT;
-        Serial.println("------ REVERTED TO PREFLT ------");
-        break;
-
-      default:
-        break;
-      }
-    }
   }
+
+  command_parser();
 }

@@ -3,6 +3,8 @@
 #include <Wire.h>
 #include <ICM45686.h>
 
+#define MADGWICK_BETA 0.1f
+
 static const uint16_t ACCEL_FSR_G = 16;
 static const uint16_t GYRO_FSR_DPS = 2000;
 static const uint16_t ODR_HZ = 1600;
@@ -13,9 +15,25 @@ static const float DEG_2_RAD = 3.14159265f / 180.0f;
 static const float ACCEL_SCALE = (float)ACCEL_FSR_G / 32768.0f * G_MS2;
 static const float GYRO_SCALE = (float)GYRO_FSR_DPS / 32768.0f * DEG_2_RAD;
 
-static const int IMU_CAL_SMPS = 200;
-
 static ICM456xx IMU(Wire, 0);
+
+static void quat2euler(FltData_t *fltdata)
+{
+    float qw = fltdata->quat[0];
+    float qx = fltdata->quat[1];
+    float qy = fltdata->quat[2];
+    float qz = fltdata->quat[3];
+
+    fltdata->roll = atan2f(2.0f * (qw * qx + qy * qz), 1.0f - 2.0f * (qx * qx + qy * qy));
+
+    float sinp = 2.0f * (qw * qy - qz * qx);
+    if (abs(sinp) >= 1)
+        fltdata->pitch = copysign(M_PI / 2, sinp);
+    else
+        fltdata->pitch = asinf(sinp);
+
+    fltdata->yaw = atan2f(2.0f * (qw * qz + qx * qy), 1.0f - 2.0f * (qy * qy + qz * qz));
+}
 
 bool imu_init()
 {
@@ -53,12 +71,94 @@ bool imu_read(FltData_t *fltdata)
     return true;
 }
 
-void imu_att_align(FltData_t *fltdata)
+void imu_calc_initial_att(FltData_t *fltdata)
 {
+    float ax = fltdata->accel[0];
+    float ay = fltdata->accel[1];
+    float az = fltdata->accel[2];
 
+    float roll = 0.0f;
+    float pitch = atan2f(ax, sqrtf(ay * ay + az * az));
+    float yaw = atan2f(ay, az);
+
+    float cy = cosf(yaw * 0.5f);
+    float sy = sinf(yaw * 0.5f);
+    float cp = cosf(pitch * 0.5f);
+    float sp = sinf(pitch * 0.5f);
+    float cr = cosf(roll * 0.5f);
+    float sr = sinf(roll * 0.5f);
+
+    fltdata->quat[0] = cr * cp * cy + sr * sp * sy;
+    fltdata->quat[1] = sr * cp * cy - cr * sp * sy;
+    fltdata->quat[2] = cr * sp * cy + sr * cp * sy;
+    fltdata->quat[3] = cr * cp * sy - sr * sp * cy;
+
+    fltdata->pitch = pitch;
+    fltdata->roll = roll;
+    fltdata->yaw = yaw;
 }
 
 void imu_run_fusion(FltData_t *fltdata, float dt)
 {
-    return;
+    float q0 = fltdata->quat[0], q1 = fltdata->quat[1], q2 = fltdata->quat[2], q3 = fltdata->quat[3];
+    float gx = fltdata->gyro[0], gy = fltdata->gyro[1], gz = fltdata->gyro[2];
+    float ax = fltdata->accel[0], ay = fltdata->accel[1], az = fltdata->accel[2];
+
+    // Rate of change of quaternion from Gyro
+    float qDot1 = 0.5f * (-q1 * gx - q2 * gy - q3 * gz);
+    float qDot2 = 0.5f * ( q0 * gx + q2 * gz - q3 * gy);
+    float qDot3 = 0.5f * ( q0 * gy - q1 * gz + q3 * gx);
+    float qDot4 = 0.5f * ( q0 * gz + q1 * gy - q2 * gx);
+
+    // Accelerometer Feedback (Only if enabled and gravity is valid)
+    // We ignore this during BURN (High-G) to prevent the "Thrust Vector" from tricking the IMU
+    if (fltdata->accel_fusion_en && !((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f))) {
+        float recipNorm = 1.0f / sqrtf(ax * ax + ay * ay + az * az);
+        ax *= recipNorm; ay *= recipNorm; az *= recipNorm;
+
+        // Gradient Descent Correction (Madgwick)
+        float _2q0 = 2.0f * q0;
+        float _2q1 = 2.0f * q1;
+        float _2q2 = 2.0f * q2;
+        float _2q3 = 2.0f * q3;
+        float _4q0 = 4.0f * q0;
+        float _4q1 = 4.0f * q1;
+        float _4q2 = 4.0f * q2;
+        float _8q1 = 8.0f * q1;
+        float _8q2 = 8.0f * q2;
+        float q0q0 = q0 * q0;
+        float q1q1 = q1 * q1;
+        float q2q2 = q2 * q2;
+        float q3q3 = q3 * q3;
+
+        // Gradient Step
+        float s0 = _4q0 * q2q2 + _2q2 * ax + _4q0 * q1q1 - _2q1 * ay;
+        float s1 = _4q1 * q3q3 - _2q3 * ax + 4.0f * q0q0 * q1 - _2q0 * ay - _4q1 + _8q1 * q1q1 + _8q1 * q2q2 + _4q1 * az;
+        float s2 = 4.0f * q0q0 * q2 + _2q0 * ax + _4q2 * q3q3 - _2q3 * ay - _4q2 + _8q2 * q1q1 + _8q2 * q2q2 + _4q2 * az;
+        float s3 = 4.0f * q1q1 * q3 - _2q1 * ax + 4.0f * q2q2 * q3 - _2q2 * ay;
+
+        recipNorm = 1.0f / sqrtf(s0 * s0 + s1 * s1 + s2 * s2 + s3 * s3);
+        
+        // Apply Feedback
+        qDot1 -= MADGWICK_BETA * s0 * recipNorm;
+        qDot2 -= MADGWICK_BETA * s1 * recipNorm;
+        qDot3 -= MADGWICK_BETA * s2 * recipNorm;
+        qDot4 -= MADGWICK_BETA * s3 * recipNorm;
+    }
+
+    // Integrate
+    q0 += qDot1 * dt;
+    q1 += qDot2 * dt;
+    q2 += qDot3 * dt;
+    q3 += qDot4 * dt;
+
+    // Normalize
+    float recipNorm = 1.0f / sqrtf(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
+    fltdata->quat[0] = q0 * recipNorm;
+    fltdata->quat[1] = q1 * recipNorm;
+    fltdata->quat[2] = q2 * recipNorm;
+    fltdata->quat[3] = q3 * recipNorm;
+
+    // Output Euler
+    quat2euler(fltdata);
 }

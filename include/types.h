@@ -32,8 +32,6 @@ typedef struct
     // Control outputs
     float servo_out[4];
 
-    // Accel fusion kill sw
-    bool accel_fusion_en;
 } FltData_t;
 
 typedef struct

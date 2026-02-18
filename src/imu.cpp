@@ -3,8 +3,6 @@
 #include <Wire.h>
 #include <ICM45686.h>
 
-#define MADGWICK_BETA 0.1f
-
 static const uint16_t ACCEL_FSR_G = 16;
 static const uint16_t GYRO_FSR_DPS = 2000;
 static const uint16_t ODR_HZ = 1600;
@@ -98,53 +96,16 @@ void imu_calc_initial_att(FltData_t *fltdata)
     fltdata->yaw = yaw;
 }
 
-void imu_run_fusion(FltData_t *fltdata, float dt)
+void imu_calc_att(FltData_t *fltdata, float dt)
 {
     float q0 = fltdata->quat[0], q1 = fltdata->quat[1], q2 = fltdata->quat[2], q3 = fltdata->quat[3];
     float gx = fltdata->gyro[0], gy = fltdata->gyro[1], gz = fltdata->gyro[2];
-    float ax = fltdata->accel[0], ay = fltdata->accel[1], az = fltdata->accel[2];
 
     // Rate of change of quaternion from Gyro
     float qDot1 = 0.5f * (-q1 * gx - q2 * gy - q3 * gz);
     float qDot2 = 0.5f * ( q0 * gx + q2 * gz - q3 * gy);
     float qDot3 = 0.5f * ( q0 * gy - q1 * gz + q3 * gx);
     float qDot4 = 0.5f * ( q0 * gz + q1 * gy - q2 * gx);
-
-    // Accelerometer Feedback (Only if enabled and gravity is valid)
-    // We ignore this during BURN (High-G) to prevent the "Thrust Vector" from tricking the IMU
-    if (fltdata->accel_fusion_en && !((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f))) {
-        float recipNorm = 1.0f / sqrtf(ax * ax + ay * ay + az * az);
-        ax *= recipNorm; ay *= recipNorm; az *= recipNorm;
-
-        // Gradient Descent Correction (Madgwick)
-        float _2q0 = 2.0f * q0;
-        float _2q1 = 2.0f * q1;
-        float _2q2 = 2.0f * q2;
-        float _2q3 = 2.0f * q3;
-        float _4q0 = 4.0f * q0;
-        float _4q1 = 4.0f * q1;
-        float _4q2 = 4.0f * q2;
-        float _8q1 = 8.0f * q1;
-        float _8q2 = 8.0f * q2;
-        float q0q0 = q0 * q0;
-        float q1q1 = q1 * q1;
-        float q2q2 = q2 * q2;
-        float q3q3 = q3 * q3;
-
-        // Gradient Step
-        float s0 = _4q0 * q2q2 + _2q2 * ax + _4q0 * q1q1 - _2q1 * ay;
-        float s1 = _4q1 * q3q3 - _2q3 * ax + 4.0f * q0q0 * q1 - _2q0 * ay - _4q1 + _8q1 * q1q1 + _8q1 * q2q2 + _4q1 * az;
-        float s2 = 4.0f * q0q0 * q2 + _2q0 * ax + _4q2 * q3q3 - _2q3 * ay - _4q2 + _8q2 * q1q1 + _8q2 * q2q2 + _4q2 * az;
-        float s3 = 4.0f * q1q1 * q3 - _2q1 * ax + 4.0f * q2q2 * q3 - _2q2 * ay;
-
-        recipNorm = 1.0f / sqrtf(s0 * s0 + s1 * s1 + s2 * s2 + s3 * s3);
-        
-        // Apply Feedback
-        qDot1 -= MADGWICK_BETA * s0 * recipNorm;
-        qDot2 -= MADGWICK_BETA * s1 * recipNorm;
-        qDot3 -= MADGWICK_BETA * s2 * recipNorm;
-        qDot4 -= MADGWICK_BETA * s3 * recipNorm;
-    }
 
     // Integrate
     q0 += qDot1 * dt;

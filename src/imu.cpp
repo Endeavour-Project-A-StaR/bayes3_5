@@ -15,8 +15,6 @@ static const float GYRO_SCALE = (float)GYRO_FSR_DPS / 32768.0f * DEG_2_RAD;
 
 static ICM456xx IMU(Wire, 0);
 
-static float gyro_bias[3] = {0.0f, 0.0f, 0.0f};
-
 static void quat2euler(FltData_t *fltdata)
 {
     float qw = fltdata->quat[0];
@@ -52,7 +50,7 @@ bool imu_init()
     return true;
 }
 
-void imu_cal_gyro()
+void imu_cal_gyro(FltData_t* fltdata)
 {
     const int smps = 500;
 
@@ -70,9 +68,9 @@ void imu_cal_gyro()
         s_z += (float)imu_data.gyro_data[2] * GYRO_SCALE;
         delay(1);
     }
-    gyro_bias[0] = s_x / smps;
-    gyro_bias[1] = s_y / smps;
-    gyro_bias[2] = s_z / smps;
+    fltdata->gyro_bias[0] = s_x / smps;
+    fltdata->gyro_bias[1] = s_y / smps;
+    fltdata->gyro_bias[2] = s_z / smps;
 }
 
 bool imu_read(FltData_t *fltdata)
@@ -87,9 +85,9 @@ bool imu_read(FltData_t *fltdata)
     fltdata->accel[1] = (float)imu_data.accel_data[1] * ACCEL_SCALE;
     fltdata->accel[2] = (float)imu_data.accel_data[2] * ACCEL_SCALE;
 
-    fltdata->gyro[0] = ((float)imu_data.gyro_data[0] * GYRO_SCALE) - gyro_bias[0];
-    fltdata->gyro[1] = ((float)imu_data.gyro_data[1] * GYRO_SCALE) - gyro_bias[1];
-    fltdata->gyro[2] = ((float)imu_data.gyro_data[2] * GYRO_SCALE) - gyro_bias[2];
+    fltdata->gyro[0] = ((float)imu_data.gyro_data[0] * GYRO_SCALE) - fltdata->gyro_bias[0];
+    fltdata->gyro[1] = ((float)imu_data.gyro_data[1] * GYRO_SCALE) - fltdata->gyro_bias[1];
+    fltdata->gyro[2] = ((float)imu_data.gyro_data[2] * GYRO_SCALE) - fltdata->gyro_bias[2];
 
     return true;
 }

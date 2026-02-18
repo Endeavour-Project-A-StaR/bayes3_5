@@ -22,16 +22,26 @@ void setup()
 
   Serial.println("------ Bayes V3_5 Test ------");
 
+  delay(500);
+
+  Serial.println("Will init IMU");
+
   int ret = imu_init();
   Serial.println(ret ? "IMU Init Success" : "IMU Init Failed");
   if (!ret)
     while (1)
       delay(1);
 
-  Serial.println("Will calibrate gyro bias in 2 sec");
-  delay(2000);
-  imu_cal_gyro();
+  delay(500);
+
+  Serial.println("Will calibrate gyro bias in 5 sec");
+  delay(5000);
+  imu_cal_gyro(&fltdata);
   Serial.println("Gyro calibration complete");
+
+  delay(500);
+
+  Serial.println("Bayes init complete. Will enter Preflight state");
 
   state = STATE_PREFLT;
 
@@ -43,51 +53,75 @@ void loop()
   uint32_t current_time = micros();
   float dt = (current_time - last_loop_time) / 1000000.0f;
 
-  if (dt >= 0.001f)
+  if (dt >= (1.0f / 1600.0f)) // 1600Hz
   {
     last_loop_time = current_time;
-    imu_read(&fltdata);
 
-    if (state == STATE_PREFLT)
+    if (imu_read(&fltdata))
     {
-      imu_calc_initial_att(&fltdata);
-    }
-    else if (state == STATE_BURN)
-    {
-      imu_calc_att(&fltdata, dt);
-    }
+      switch (state)
+      {
 
-    if (millis() - last_print_time > 10)
-    {
-      last_print_time = millis();
-      float pitch_deg = fltdata.pitch * (180.0f / 3.14159f);
-      float roll_deg = fltdata.roll * (180.0f / 3.14159f);
-      float yaw_deg = fltdata.yaw * (180.0f / 3.14159f);
+      case STATE_PREFLT:
 
-      Serial.print(state == STATE_PREFLT ? "PREFLT | " : "FLT | ");
-      Serial.print("P: ");
-      Serial.print(pitch_deg, 1);
-      Serial.print("\tR: ");
-      Serial.print(roll_deg, 1);
-      Serial.print("\tY: ");
-      Serial.print(yaw_deg, 1);
-      Serial.println();
-    }
-  }
+        imu_calc_initial_att(&fltdata);
+        if (Serial.available())
+        {
+          char c = Serial.read();
+          if (c == 'A')
+          {
+            state = STATE_NAVLK;
+            Serial.println("------ NAV LOCK COMPLETE ------");
+          }
+        }
+        break;
 
-  // 5. Read User Commands
-  if (Serial.available())
-  {
-    char cmd = Serial.read();
-    if (cmd == 'l')
-    {
-      state = STATE_BURN;
-      Serial.println("\n*** LAUNCH DETECTED - SWITCHING TO GYRO ***\n");
+      case STATE_NAVLK:
+
+        imu_calc_att(&fltdata, dt);
+
+        if (fltdata.accel[0] > 20.0f)
+        {
+          state = STATE_BURN;
+          Serial.println("------ LIFTOFF ------");
+        }
+        break;
+
+      case STATE_BURN:
+
+        imu_calc_att(&fltdata, dt);
+
+        if (fltdata.accel[0] < 0.0f)
+        {
+          state = STATE_COAST;
+          Serial.println("------ BURNOUT ------");
+        }
+
+        break;
+
+      case STATE_COAST:
+
+        imu_calc_att(&fltdata, dt);
+
+        if (false)
+        {
+          state = STATE_RECVY;
+          Serial.println("------ APOGEE REACHED ------");
+        }
+        break;
+
+      case STATE_RECVY:
+        break;
+
+      case STATE_OVRD:
+
+        imu_calc_att(&fltdata, dt);
+        break;
+      }
     }
-    else if (cmd == 'p')
+    else
     {
-      state = STATE_PREFLT;
-      Serial.println("\n*** PAD RESET - SWITCHING TO ACCEL ***\n");
+      Serial.println("IMU READ FAIL");
     }
   }
 }

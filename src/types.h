@@ -33,3 +33,8 @@ typedef struct {
     // Accel fusion kill sw
     bool accel_fusion_en;
 } FltData_t;
+
+typedef struct {
+
+    float kp, ki, kd;
+} PIDCoeff_t;

@@ -2,6 +2,8 @@
 #include <Wire.h>
 #include "types.h"
 #include "imu.h"
+#include "nav.h"
+#include "log.h"
 
 FltStates_t state = STATE_DIAG; // Default startup to self test
 FltData_t fltdata;              // Init shared flight data struct
@@ -41,7 +43,11 @@ void setup()
 
   delay(500);
 
-  Serial.println("Bayes init complete. Will enter Preflight state");
+  Serial.println("Bayes HW init complete. Will enter Preflight state");
+
+  Serial.println("\nCommands Available: A = NAV LOCK | O = GROUND OVERRIDE | P = REVERT TO PREFLIGHT");
+
+  nav_rst_integral();
 
   state = STATE_PREFLT;
 
@@ -65,15 +71,7 @@ void loop()
       case STATE_PREFLT:
 
         imu_calc_initial_att(&fltdata);
-        if (Serial.available())
-        {
-          char c = Serial.read();
-          if (c == 'A')
-          {
-            state = STATE_NAVLK;
-            Serial.println("------ GUIDANCE IS INTERNAL ------");
-          }
-        }
+
         break;
 
       case STATE_NAVLK:
@@ -90,6 +88,7 @@ void loop()
       case STATE_BURN:
 
         imu_calc_att(&fltdata, dt);
+        nav_update_pid(&fltdata, dt);
 
         if (fltdata.accel[0] < 0.0f)
         {
@@ -102,12 +101,14 @@ void loop()
       case STATE_COAST:
 
         imu_calc_att(&fltdata, dt);
+        nav_update_pid(&fltdata, dt);
 
         if (false)
         {
           state = STATE_RECVY;
           Serial.println("------ APOGEE REACHED ------");
         }
+
         break;
 
       case STATE_RECVY:
@@ -116,15 +117,58 @@ void loop()
       case STATE_OVRD:
 
         imu_calc_att(&fltdata, dt);
+        nav_update_pid(&fltdata, dt);
+
         break;
 
       default:
+
         break;
+      }
+
+      if ((state == STATE_OVRD || state == STATE_PREFLT) && (millis() - last_print_time >= 50))
+      {
+        last_print_time = millis();
+
+        static char ser_buf[4096];
+
+        int len = serializer(ser_buf, sizeof(ser_buf), millis(), state, &fltdata);
+
+        if (len > 0 && len < sizeof(ser_buf))
+          Serial.println(ser_buf);
       }
     }
     else
     {
       Serial.println("IMU READ FAIL");
+    }
+
+    if (Serial.available())
+    {
+
+      char c = Serial.read();
+      switch (c)
+      {
+      case 'A':
+        state = STATE_NAVLK;
+        nav_rst_integral();
+        Serial.println("------ GUIDANCE IS INTERNAL ------");
+        break;
+
+      case 'O':
+        state = STATE_OVRD;
+        nav_rst_integral();
+        Serial.println("------ OVRD MODE ------");
+        break;
+
+      case 'P':
+        state = STATE_PREFLT;
+        Serial.println("------ REVERTED TO PREFLT ------");
+        break;
+
+      default:
+        break;
+      }
     }
   }
 }

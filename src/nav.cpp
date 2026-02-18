@@ -19,7 +19,7 @@ static float constrain_f(float val, float min, float max) {
     return val;
 }
 
-void nav_init() {
+void nav_rst_integral() {
     i_roll = 0.0f;
     i_pitch = 0.0f;
     i_yaw = 0.0f;

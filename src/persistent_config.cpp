@@ -1,4 +1,4 @@
-#include "persistant_config.h"
+#include "persistent_config.h"
 #include <EEPROM.h>
 #include <Arduino.h>
 

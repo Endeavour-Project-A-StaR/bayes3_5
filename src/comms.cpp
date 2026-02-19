@@ -141,6 +141,13 @@ static void cmd_processor(char *cmd_str, FltStates_t *state)
             Serial.println(val);
         }
 
+        else if (strcmp(arg1, "CHUTE_TIMEOUT") == 0)
+        {
+            config.parachute_charge_timeout_ms = (uint32_t)val;
+            Serial.print("MSG: CHUTE_TIMEOUT = ");
+            Serial.println(config.parachute_charge_timeout_ms);
+        }
+
         // Telemetry Rate
         else if (strcmp(arg1, "TELEM_RATE") == 0)
         {
@@ -172,6 +179,35 @@ static void cmd_processor(char *cmd_str, FltStates_t *state)
         {
             Serial.println("MSG: UNKNOWN TUNEABLE VARIABLE");
         }
+    }
+
+    else if (strcmp(cmd, "DUMP") == 0)
+    {
+
+        Serial.printf("CFG: PITCH_KP %.3f\n", config.pid_pitch.kp);
+        Serial.printf("CFG: PITCH_KI %.3f\n", config.pid_pitch.ki);
+        Serial.printf("CFG: PITCH_KD %.3f\n", config.pid_pitch.kd);
+
+        Serial.printf("CFG: ROLL_KP %.3f\n", config.pid_roll.kp);
+        Serial.printf("CFG: ROLL_KI %.3f\n", config.pid_roll.ki);
+        Serial.printf("CFG: ROLL_KD %.3f\n", config.pid_roll.kd);
+
+        Serial.printf("CFG: YAW_KP %.3f\n", config.pid_yaw.kp);
+        Serial.printf("CFG: YAW_KI %.3f\n", config.pid_yaw.ki);
+        Serial.printf("CFG: YAW_KD %.3f\n", config.pid_yaw.kd);
+
+        Serial.printf("CFG: PID_I_MAX %.3f\n", config.pid_i_max);
+
+        Serial.printf("CFG: SERVO_CENTER %.1f\n", config.servo_center_us);
+        Serial.printf("CFG: SERVO_LIMIT %.1f\n", config.servo_limit_max_deg);
+        Serial.printf("CFG: SERVO_US_PER_DEG %.1f\n", config.servo_us_per_deg);
+
+        Serial.printf("CFG: PARA_CHARGE_MS %lu\n", config.parachute_charge_timeout_ms);
+        Serial.printf("CFG: TELEM_RATE %lu\n", config.log_interval_ms);
+        Serial.printf("CFG: FLUSH_RATE %lu\n", config.log_flush_interval_ms);
+        Serial.printf("CFG: TEST_MODE %d\n", config.test_mode_en);
+        Serial.printf("CFG: SERVO_BURN_EN %d\n", config.en_servo_in_burn);
+
     }
 
     else if (strcmp(cmd, "SAVE") == 0)

@@ -1,6 +1,9 @@
 #include "nav.h"
 #include <math.h>
 
+static const float SERVO_CENTER = 90.0f;
+static const float SERVO_LIMIT_MAX = 30.0f;
+
 static PIDCoeff_t pid_roll = {.kp = 1.0f, .ki = 0.0f, .kd = 0.0f};
 static PIDCoeff_t pid_pitch = {.kp = 1.0f, .ki = 0.0f, .kd = 0.0f};
 static PIDCoeff_t pid_yaw = {.kp = 1.0f, .ki = 0.0f, .kd = 0.0f};

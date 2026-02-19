@@ -1,20 +1,29 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include <PWMServo.h>
+#include <Servo.h>
 #include "types.h"
 #include "imu.h"
 #include "nav.h"
 #include "log.h"
+
+/*
+Our servos uses non standard pulse widths (sad)
+pulse length: 800uS - 2200uS
+pulse length for -50 / 0 / +50 deg: 1000uS, 1500uS, 2000uS.
+*/
+
+#define SERVO_CENTER_uS 1500.0f
+#define uS_PER_DEG 10.0f
 
 #define PIN_SERVO_1 37
 #define PIN_SERVO_2 14
 #define PIN_SERVO_3 36
 #define PIN_SERVO_4 33
 
-static PWMServo servo_1;
-static PWMServo servo_2;
-static PWMServo servo_3;
-static PWMServo servo_4;
+static Servo servo_1;
+static Servo servo_2;
+static Servo servo_3;
+static Servo servo_4;
 
 FltStates_t state = STATE_DIAG; // Default startup to self test
 FltData_t fltdata;              // Init shared flight data struct
@@ -78,40 +87,45 @@ void command_parser()
   }
 }
 
+void servo_swing_test_deg2us(int pos)
+{
+  int us = (int)roundf(SERVO_CENTER_uS + (pos - 90.0f) * uS_PER_DEG);
+  servo_1.writeMicroseconds(us);
+  servo_2.writeMicroseconds(us);
+  servo_3.writeMicroseconds(us);
+  servo_4.writeMicroseconds(us);
+}
+
 void servo_swing_test()
 {
   for (int pos = 90; pos <= 135; pos++)
   {
-    servo_1.write(pos);
-    servo_2.write(pos);
-    servo_3.write(pos);
-    servo_4.write(pos);
+    servo_swing_test_deg2us(pos);
     delay(20);
   }
   for (int pos = 135; pos >= 45; pos--)
   {
-    servo_1.write(pos);
-    servo_2.write(pos);
-    servo_3.write(pos);
-    servo_4.write(pos);
+    servo_swing_test_deg2us(pos);
     delay(20);
   }
   for (int pos = 45; pos <= 90; pos++)
   {
-    servo_1.write(pos);
-    servo_2.write(pos);
-    servo_3.write(pos);
-    servo_4.write(pos);
+    servo_swing_test_deg2us(pos);
     delay(20);
   }
 }
 
 void servos_write(FltData_t *fltdata)
 {
-  servo_1.write((int)fltdata->servo_out[0]);
-  servo_2.write((int)fltdata->servo_out[1]);
-  servo_3.write((int)fltdata->servo_out[2]);
-  servo_4.write((int)fltdata->servo_out[3]);
+  int us1 = (int)roundf(SERVO_CENTER_uS + (fltdata->servo_out[0] - 90.0f) * uS_PER_DEG);
+  int us2 = (int)roundf(SERVO_CENTER_uS + (fltdata->servo_out[1] - 90.0f) * uS_PER_DEG);
+  int us3 = (int)roundf(SERVO_CENTER_uS + (fltdata->servo_out[2] - 90.0f) * uS_PER_DEG);
+  int us4 = (int)roundf(SERVO_CENTER_uS + (fltdata->servo_out[3] - 90.0f) * uS_PER_DEG);
+
+  servo_1.writeMicroseconds(us1);
+  servo_2.writeMicroseconds(us2);
+  servo_3.writeMicroseconds(us3);
+  servo_4.writeMicroseconds(us4);
 }
 
 void setup()

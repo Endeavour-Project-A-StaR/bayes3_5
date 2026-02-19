@@ -5,15 +5,13 @@
 #include "imu.h"
 #include "nav.h"
 #include "log.h"
+#include "persistant_config.h"
 
 /*
 Our servos uses non standard pulse widths (sad)
 pulse length: 800uS - 2200uS
 pulse length for -50 / 0 / +50 deg: 1000uS, 1500uS, 2000uS.
 */
-
-#define SERVO_CENTER_uS 1500.0f
-#define uS_PER_DEG 10.0f
 
 #define PIN_SERVO_1 37
 #define PIN_SERVO_2 14
@@ -89,7 +87,7 @@ void command_parser()
 
 void servo_swing_test_deg2us(int pos)
 {
-  int us = (int)roundf(SERVO_CENTER_uS + (pos - 90.0f) * uS_PER_DEG);
+  int us = (int)roundf(config.servo_center_us + (pos - 90.0f) * config.servo_us_per_deg);
   servo_1.writeMicroseconds(us);
   servo_2.writeMicroseconds(us);
   servo_3.writeMicroseconds(us);
@@ -117,10 +115,10 @@ void servo_swing_test()
 
 void servos_write(FltData_t *fltdata)
 {
-  int us1 = (int)roundf(SERVO_CENTER_uS + (fltdata->servo_out[0] - 90.0f) * uS_PER_DEG);
-  int us2 = (int)roundf(SERVO_CENTER_uS + (fltdata->servo_out[1] - 90.0f) * uS_PER_DEG);
-  int us3 = (int)roundf(SERVO_CENTER_uS + (fltdata->servo_out[2] - 90.0f) * uS_PER_DEG);
-  int us4 = (int)roundf(SERVO_CENTER_uS + (fltdata->servo_out[3] - 90.0f) * uS_PER_DEG);
+  int us1 = (int)roundf(config.servo_center_us + (fltdata->servo_out[0] - 90.0f) * config.servo_us_per_deg);
+  int us2 = (int)roundf(config.servo_center_us + (fltdata->servo_out[1] - 90.0f) * config.servo_us_per_deg);
+  int us3 = (int)roundf(config.servo_center_us + (fltdata->servo_out[2] - 90.0f) * config.servo_us_per_deg);
+  int us4 = (int)roundf(config.servo_center_us + (fltdata->servo_out[3] - 90.0f) * config.servo_us_per_deg);
 
   servo_1.writeMicroseconds(us1);
   servo_2.writeMicroseconds(us2);
@@ -138,6 +136,8 @@ void setup()
 
   while (!Serial.available())
     delay(1);
+
+  config_init();
 
   Serial.println("------ Bayes V3_5 Test ------");
 

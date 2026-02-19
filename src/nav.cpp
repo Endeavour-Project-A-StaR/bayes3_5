@@ -1,17 +1,12 @@
 #include "nav.h"
+#include "persistant_config.h"
 #include <math.h>
 
 static const float SERVO_CENTER = 90.0f;
-static const float SERVO_LIMIT_MAX = 30.0f;
-
-static PIDCoeff_t pid_roll = {.kp = 1.0f, .ki = 0.0f, .kd = 0.0f};
-static PIDCoeff_t pid_pitch = {.kp = 1.0f, .ki = 0.0f, .kd = 0.0f};
-static PIDCoeff_t pid_yaw = {.kp = 1.0f, .ki = 0.0f, .kd = 0.0f};
 
 static float i_roll = 0.0f;
 static float i_pitch = 0.0f;
 static float i_yaw = 0.0f;
-static const float I_TERM_MAX = 10.0f;
 
 static float constrain_f(float val, float min, float max)
 {
@@ -56,18 +51,18 @@ void nav_update_pid(FltData_t *fltdata, float dt)
 
     // Roll PID
     i_roll += err_roll * dt;
-    i_roll = constrain_f(i_roll, -I_TERM_MAX, I_TERM_MAX);
-    float out_roll = (pid_roll.kp * err_roll) + (pid_roll.ki * i_roll) - (pid_roll.kd * fltdata->gyro[0]);
+    i_roll = constrain_f(i_roll, -config.pid_i_max, config.pid_i_max);
+    float out_roll = (config.pid_roll.kp * err_roll) + (config.pid_roll.ki * i_roll) - (config.pid_roll.kd * fltdata->gyro[0]);
 
     // Pitch PID
     i_pitch += err_pitch * dt;
-    i_pitch = constrain_f(i_pitch, -I_TERM_MAX, I_TERM_MAX);
-    float out_pitch = (pid_pitch.kp * err_pitch) + (pid_pitch.ki * i_pitch) - (pid_pitch.kd * fltdata->gyro[1]);
+    i_pitch = constrain_f(i_pitch, -config.pid_i_max, config.pid_i_max);
+    float out_pitch = (config.pid_pitch.kp * err_pitch) + (config.pid_pitch.ki * i_pitch) - (config.pid_pitch.kd * fltdata->gyro[1]);
 
     // Yaw PID
     i_yaw += err_yaw * dt;
-    i_yaw = constrain_f(i_yaw, -I_TERM_MAX, I_TERM_MAX);
-    float out_yaw = (pid_yaw.kp * err_yaw) + (pid_yaw.ki * i_yaw) - (pid_yaw.kd * fltdata->gyro[2]);
+    i_yaw = constrain_f(i_yaw, -config.pid_i_max, config.pid_i_max);
+    float out_yaw = (config.pid_yaw.kp * err_yaw) + (config.pid_yaw.ki * i_yaw) - (config.pid_yaw.kd * fltdata->gyro[2]);
 
     // 3. PLUS (+)-CONFIGURATION SERVO MIXER
     // Maps the 3 rotational requests into 4 physical servo movements.
@@ -87,8 +82,8 @@ void nav_update_pid(FltData_t *fltdata, float dt)
     float m4 = -out_yaw + out_roll;   // Left
 
     // 4. APPLY LIMITS & CENTER OFFSET
-    fltdata->servo_out[0] = SERVO_CENTER + constrain_f(m1, -SERVO_LIMIT_MAX, SERVO_LIMIT_MAX);
-    fltdata->servo_out[1] = SERVO_CENTER + constrain_f(m2, -SERVO_LIMIT_MAX, SERVO_LIMIT_MAX);
-    fltdata->servo_out[2] = SERVO_CENTER + constrain_f(m3, -SERVO_LIMIT_MAX, SERVO_LIMIT_MAX);
-    fltdata->servo_out[3] = SERVO_CENTER + constrain_f(m4, -SERVO_LIMIT_MAX, SERVO_LIMIT_MAX);
+    fltdata->servo_out[0] = SERVO_CENTER + constrain_f(m1, -config.servo_limit_max_deg, config.servo_limit_max_deg);
+    fltdata->servo_out[1] = SERVO_CENTER + constrain_f(m2, -config.servo_limit_max_deg, config.servo_limit_max_deg);
+    fltdata->servo_out[2] = SERVO_CENTER + constrain_f(m3, -config.servo_limit_max_deg, config.servo_limit_max_deg);
+    fltdata->servo_out[3] = SERVO_CENTER + constrain_f(m4, -config.servo_limit_max_deg, config.servo_limit_max_deg);
 }

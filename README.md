@@ -9,7 +9,7 @@ Flight controller software for Bayes V3_5
 - [ ] Add logging to SD card
 - [ ] Add timer for burn to coast transistion
 - [ ] Add timer to parachute deployment
-- [ ] Move PID constants and tunables to EEPROM
+- [x] Move PID constants and tunables to EEPROM
 - [ ] Ground station software
 - [ ] Enable tuning from ground station SW?
 - [ ] Add watchdog?

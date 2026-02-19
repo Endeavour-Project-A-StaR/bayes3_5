@@ -74,105 +74,89 @@ static void cmd_processor(char *cmd_str, FltStates_t *state)
         if (strcmp(arg1, "PITCH_KP") == 0)
         {
             config.pid_pitch.kp = val;
-            Serial.print("MSG: PITCH_KP = ");
-            Serial.println(val);
+            Serial.printf("MSG: PITCH_KP %.3f\n", config.pid_pitch.kp);
         }
         else if (strcmp(arg1, "PITCH_KI") == 0)
         {
             config.pid_pitch.ki = val;
-            Serial.print("MSG: PITCH_KI = ");
-            Serial.println(val);
+            Serial.printf("MSG: PITCH_KI %.3f\n", config.pid_pitch.ki);
         }
         else if (strcmp(arg1, "PITCH_KD") == 0)
         {
             config.pid_pitch.kd = val;
-            Serial.print("MSG: PITCH_KD = ");
-            Serial.println(val);
+            Serial.printf("MSG: PITCH_KD %.3f\n", config.pid_pitch.kd);
         }
 
         else if (strcmp(arg1, "ROLL_KP") == 0)
         {
             config.pid_roll.kp = val;
-            Serial.print("MSG: ROLL_KP = ");
-            Serial.println(val);
+            Serial.printf("MSG: ROLL_KP %.3f\n", config.pid_roll.kp);
         }
         else if (strcmp(arg1, "ROLL_KI") == 0)
         {
             config.pid_roll.ki = val;
-            Serial.print("MSG: ROLL_KI = ");
-            Serial.println(val);
+            Serial.printf("MSG: ROLL_KI %.3f\n", config.pid_roll.ki);
         }
         else if (strcmp(arg1, "ROLL_KD") == 0)
         {
             config.pid_roll.kd = val;
-            Serial.print("MSG: ROLL_KD = ");
-            Serial.println(val);
+            Serial.printf("MSG: ROLL_KD %.3f\n", config.pid_roll.kd);
         }
 
-        if (strcmp(arg1, "YAW_KP") == 0)
+        else if (strcmp(arg1, "YAW_KP") == 0)
         {
             config.pid_yaw.kp = val;
-            Serial.print("MSG: YAW_KP = ");
-            Serial.println(val);
+            Serial.printf("MSG: YAW_KP %.3f\n", config.pid_yaw.kp);
         }
         else if (strcmp(arg1, "YAW_KI") == 0)
         {
             config.pid_yaw.ki = val;
-            Serial.print("MSG: YAW_KI = ");
-            Serial.println(val);
+            Serial.printf("MSG: YAW_KI %.3f\n", config.pid_yaw.ki);
         }
         else if (strcmp(arg1, "YAW_KD") == 0)
         {
             config.pid_yaw.kd = val;
-            Serial.print("MSG: YAW_KD = ");
-            Serial.println(val);
+            Serial.printf("MSG: YAW_KD %.3f\n", config.pid_yaw.kd);
         }
 
         else if (strcmp(arg1, "SERVO_CENTER") == 0)
         {
             config.servo_center_us = val;
-            Serial.print("MSG: SERVO_CENTER = ");
-            Serial.println(val);
+            Serial.printf("MSG: SERVO_CENTER %.1f\n", config.servo_center_us);
         }
         else if (strcmp(arg1, "SERVO_LIMIT") == 0)
         {
             config.servo_limit_max_deg = val;
-            Serial.print("MSG: SERVO_LIMIT = ");
-            Serial.println(val);
+            Serial.printf("MSG: SERVO_LIMIT %.1f\n", config.servo_limit_max_deg);
         }
 
-        else if (strcmp(arg1, "CHUTE_TIMEOUT") == 0)
+        else if (strcmp(arg1, "CHUTE_TIMEOUT_MS") == 0)
         {
             config.parachute_charge_timeout_ms = (uint32_t)val;
-            Serial.print("MSG: CHUTE_TIMEOUT = ");
-            Serial.println(config.parachute_charge_timeout_ms);
+            Serial.printf("MSG: CHUTE_TIMEOUT_MS %lu\n", config.parachute_charge_timeout_ms);
         }
 
         // Telemetry Rate
         else if (strcmp(arg1, "TELEM_RATE") == 0)
         {
             config.log_interval_ms = (uint32_t)val;
-            Serial.print("MSG: TELEM_RATE = ");
-            Serial.println((uint32_t)val);
+            Serial.printf("MSG: TELEM_RATE %lu\n", config.log_interval_ms);
         }
         else if (strcmp(arg1, "TELEM_FLUSH_RATE") == 0)
         {
             config.log_flush_interval_ms = (uint32_t)val;
-            Serial.print("MSG: TELEM_FLUSH_RATE = ");
-            Serial.println((uint32_t)val);
+            Serial.printf("MSG: FLUSH_RATE %lu\n", config.log_flush_interval_ms);
         }
 
         else if (strcmp(arg1, "SERVO_BURN_EN") == 0)
         {
             config.en_servo_in_burn = ((uint32_t)val == 0 ? false : true);
-            Serial.print("MSG: SERVO_BURN_EN = ");
-            Serial.println(config.en_servo_in_burn ? "True" : "False");
+            Serial.printf("MSG: SERVO_BURN_EN %d\n", config.en_servo_in_burn);
         }
         else if (strcmp(arg1, "TEST_MODE_EN") == 0)
         {
             config.test_mode_en = ((uint32_t)val == 0 ? false : true);
-            Serial.print("MSG: TEST_MODE_EN = ");
-            Serial.println(config.test_mode_en ? "True" : "False");
+            Serial.printf("MSG: TEST_MODE_EN %d\n", config.test_mode_en);
         }
 
         else
@@ -202,12 +186,11 @@ static void cmd_processor(char *cmd_str, FltStates_t *state)
         Serial.printf("CFG: SERVO_LIMIT %.1f\n", config.servo_limit_max_deg);
         Serial.printf("CFG: SERVO_US_PER_DEG %.1f\n", config.servo_us_per_deg);
 
-        Serial.printf("CFG: PARA_CHARGE_MS %lu\n", config.parachute_charge_timeout_ms);
+        Serial.printf("CFG: CHUTE_TIMEOUT_MS %lu\n", config.parachute_charge_timeout_ms);
         Serial.printf("CFG: TELEM_RATE %lu\n", config.log_interval_ms);
         Serial.printf("CFG: FLUSH_RATE %lu\n", config.log_flush_interval_ms);
-        Serial.printf("CFG: TEST_MODE %d\n", config.test_mode_en);
+        Serial.printf("CFG: TEST_MODE_EN %d\n", config.test_mode_en);
         Serial.printf("CFG: SERVO_BURN_EN %d\n", config.en_servo_in_burn);
-
     }
 
     else if (strcmp(cmd, "SAVE") == 0)

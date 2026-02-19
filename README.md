@@ -1,5 +1,7 @@
-# bayes3_5
-Flight controller software for Bayes V3_5
+# RACS
+**R**ocket **A**ttitude **C**ontrol **S**oftware
+
+Flight computer software to hold rockets up right
 
 # TODO (As of 19 Feb):
 - [x] Ground Test Mode

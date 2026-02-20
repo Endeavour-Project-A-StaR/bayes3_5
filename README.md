@@ -3,7 +3,7 @@
 
 Flight computer software to hold rockets up right
 
-# TODO (As of 19 Feb):
+# TODO (As of 0300 20 Feb):
 - [x] Ground Test Mode
 - [ ] Switch serial to bluetooth
 - [x] Add soft reboot and safe guards

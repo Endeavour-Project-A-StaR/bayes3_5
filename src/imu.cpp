@@ -1,4 +1,5 @@
 #include "imu.h"
+#include "eeprom_config.h"
 #include <math.h>
 #include <Wire.h>
 #include <ICM45686.h>
@@ -50,9 +51,15 @@ void imu_cal_gyro(FltData_t *fltdata)
         s_z += (float)imu_data.gyro_data[2] * GYRO_SCALE;
         delay(1);
     }
-    fltdata->gyro_bias[0] = s_x / smps;
+
+    float sign_flip = config.test_mode_en ? -1.0f : 1.0f;
+
+    if (sign_flip != 1.0f)
+        Serial.println("MSG: INVERTED TEST MODE ENABLED");
+
+    fltdata->gyro_bias[0] = (s_x / smps) * sign_flip;
     fltdata->gyro_bias[1] = s_y / smps;
-    fltdata->gyro_bias[2] = s_z / smps;
+    fltdata->gyro_bias[2] = (s_z / smps) * sign_flip;
 }
 
 bool imu_read(FltData_t *fltdata)
@@ -63,13 +70,25 @@ bool imu_read(FltData_t *fltdata)
     if (ret != 0)
         return false;
 
-    fltdata->accel[0] = (float)imu_data.accel_data[0] * ACCEL_SCALE;
-    fltdata->accel[1] = (float)imu_data.accel_data[1] * ACCEL_SCALE;
-    fltdata->accel[2] = (float)imu_data.accel_data[2] * ACCEL_SCALE;
+    fltdata->accel[0] = ((float)imu_data.accel_data[0] * ACCEL_SCALE);
+    fltdata->accel[1] = ((float)imu_data.accel_data[1] * ACCEL_SCALE);
+    fltdata->accel[2] = ((float)imu_data.accel_data[2] * ACCEL_SCALE);
 
-    fltdata->gyro[0] = ((float)imu_data.gyro_data[0] * GYRO_SCALE) - fltdata->gyro_bias[0];
-    fltdata->gyro[1] = ((float)imu_data.gyro_data[1] * GYRO_SCALE) - fltdata->gyro_bias[1];
-    fltdata->gyro[2] = ((float)imu_data.gyro_data[2] * GYRO_SCALE) - fltdata->gyro_bias[2];
+    fltdata->gyro[0] = ((float)imu_data.gyro_data[0] * GYRO_SCALE);
+    fltdata->gyro[1] = ((float)imu_data.gyro_data[1] * GYRO_SCALE);
+    fltdata->gyro[2] = ((float)imu_data.gyro_data[2] * GYRO_SCALE);
+
+    if (config.test_mode_en)
+    {
+        fltdata->accel[0] = -fltdata->accel[0];
+        fltdata->accel[2] = -fltdata->accel[2];
+        fltdata->gyro[0] = -fltdata->gyro[0];
+        fltdata->gyro[2] = -fltdata->gyro[2];
+    }
+
+    fltdata->gyro[0] -= fltdata->gyro_bias[0];
+    fltdata->gyro[1] -= fltdata->gyro_bias[1];
+    fltdata->gyro[2] -= fltdata->gyro_bias[2];
 
     return true;
 }

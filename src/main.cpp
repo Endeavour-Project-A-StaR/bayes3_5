@@ -65,6 +65,8 @@ void setup()
 
   state = STATE_PREFLT;
 
+  Serial.println("MSG: The rocket knows where it is at all times.");
+
   digitalWrite(LED_BUILTIN, HIGH);
 
   last_loop_time = micros();

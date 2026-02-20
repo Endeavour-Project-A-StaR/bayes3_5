@@ -7,6 +7,7 @@
 #include "actuators.h"
 #include "persistent_config.h"
 #include "comms.h"
+#include "baro.h"
 
 FltStates_t state = STATE_DIAG; // Default startup to self test
 FltData_t fltdata;              // Init shared flight data struct
@@ -32,11 +33,15 @@ void setup()
 
   config_init();
 
-  int ret = imu_init();
-  if (!ret)
+  if (!imu_init())
     while (1)
       delay(1);
   Serial.println("MSG: IMU INIT SUCCESS");
+
+  if (!baro_init())
+    while (1)
+      delay(1);
+  Serial.println("MSG: BARO INIT SUCCESS");
 
   servo_init(&fltdata);
 
@@ -139,7 +144,14 @@ void loop()
 
       servo_write(&fltdata);
 
-      // comms_send_telem(state, &fltdata);
+      static uint32_t last_baro_read = 0;
+      if ((current_time - last_baro_read) >= 15625)
+      {
+        baro_read(&fltdata);
+        last_baro_read = current_time;
+      }
+
+      comms_send_telem(state, &fltdata);
     }
     else
     {

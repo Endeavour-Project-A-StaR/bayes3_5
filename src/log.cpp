@@ -68,7 +68,7 @@ bool logfile_init()
 
     char filename[32];
 
-    for (int i; i < 1000; i++)
+    for (int i = 0; i < 1000; i++)
     {
         snprintf(filename, sizeof(filename), "flightlog_%03d.json", i);
         if (!sd.exists(filename))

@@ -1,7 +1,7 @@
 # RACS
 **R**ocket **A**ttitude **C**ontrol **S**oftware
 
-Flight computer software to hold rockets up right
+Flight computer software to hold rockets upright
 
 # TODO (As of 0300 20 Feb):
 - [x] Ground Test Mode

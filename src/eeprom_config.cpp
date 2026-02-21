@@ -33,11 +33,11 @@ void config_init()
 
     if (config.magic == CFG_MAGIC)
     {
-        Serial.println("MSG: CONFIG LOADED FROM EEPROM");
+        Serial1.println("MSG: CONFIG LOADED FROM EEPROM");
     }
     else
     {
-        Serial.println("MSG: EEPROM INVALID, RESTORING TO DEFAULT");
+        Serial1.println("MSG: EEPROM INVALID, RESTORING TO DEFAULT");
         config_set_defaults();
         config_save();
     }
@@ -46,5 +46,5 @@ void config_init()
 void config_save()
 {
     EEPROM.put(0, config);
-    Serial.println("MSG: EEPROM WRITE SUCCESS");
+    Serial1.println("MSG: EEPROM WRITE SUCCESS");
 }

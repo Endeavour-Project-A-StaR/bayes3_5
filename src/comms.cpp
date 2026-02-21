@@ -11,10 +11,56 @@ static uint32_t last_print_time = 0;
 static char cmd_buf[64];
 static uint8_t cmd_idx = 0;
 
+typedef enum
+{
+    T_F32,
+    T_U32,
+    T_BOOL
+} VarType_t;
+
+typedef struct
+{
+    const char *name;
+    void *ptr;
+    VarType_t type;
+} ConfigEntry_t;
+
+const ConfigEntry_t config_table[] = {
+
+    {"PITCH_KP", &config.pid_pitch.kp, T_F32},
+    {"PITCH_KI", &config.pid_pitch.ki, T_F32},
+    {"PITCH_KD", &config.pid_pitch.kd, T_F32},
+
+    {"ROLL_KP", &config.pid_roll.kp, T_F32},
+    {"ROLL_KI", &config.pid_roll.ki, T_F32},
+    {"ROLL_KD", &config.pid_roll.kd, T_F32},
+
+    {"YAW_KP", &config.pid_yaw.kp, T_F32},
+    {"YAW_KI", &config.pid_yaw.ki, T_F32},
+    {"YAW_KD", &config.pid_yaw.kd, T_F32},
+
+    {"PID_I_MAX", &config.pid_i_max, T_F32},
+
+    {"SERVO_CENTER_US", &config.servo_center_us, T_F32},
+    {"SERVO_FLT_LIM_DEG", &config.servo_limit_max_deg, T_F32},
+    {"SERVO_US_PER_DEG", &config.servo_us_per_deg, T_F32},
+
+    {"PARACHUTE_TIMEOUT_FROM_IGN_MS", &config.parachute_charge_timeout_ms, T_U32},
+    {"MOTOR_BURN_MS", &config.motor_burn_time_ms, T_U32},
+
+    {"LOG_RATE_MS", &config.log_interval_ms, T_U32},
+    {"LOG_FLUSH_MS", &config.log_flush_interval_ms, T_U32},
+
+    {"SERVO_BURN_EN", &config.en_servo_in_burn, T_BOOL},
+    {"INVERTED_TEST_EN", &config.test_mode_en, T_BOOL}};
+
+const size_t NUM_CONFIG_ENTRIES = sizeof(config_table) / sizeof(config_table[0]);
+
+// TELEM ONLY SENT TO USB ACM
 void comms_send_telem(FltStates_t state, FltData_t *fltdata)
 {
     if ((state == STATE_OVRD || state == STATE_PREFLT) &&
-        (millis() - last_print_time >= config.log_interval_ms))
+        (millis() - last_print_time >= 50))
     {
         last_print_time = millis();
 
@@ -33,7 +79,7 @@ static void cmd_processor(char *cmd_str, FltStates_t *state)
 
     if (flt_lockout_en)
     {
-        Serial.println("MSG: COMMAND IGNORED IN FLIGHT LOCKOUT");
+        Serial1.println("MSG: COMMAND IGNORED IN FLIGHT LOCKOUT");
         return;
     }
 
@@ -47,170 +93,90 @@ static void cmd_processor(char *cmd_str, FltStates_t *state)
     {
         *state = STATE_NAVLK;
         nav_rst_integral();
-        Serial.println("MSG: GUIDANCE IS INTERNAL");
+        Serial1.println("MSG: GUIDANCE IS INTERNAL");
     }
     else if (strcmp(cmd, "OVRD") == 0)
     {
         *state = STATE_OVRD;
         nav_rst_integral();
-        Serial.println("MSG: GROUND OVERRIDE MODE");
+        Serial1.println("MSG: GROUND OVERRIDE MODE");
     }
     else if (strcmp(cmd, "PREFLT") == 0)
     {
         *state = STATE_PREFLT;
-        Serial.println("MSG: REVERTED TO PREFLT");
+        Serial1.println("MSG: REVERTED TO PREFLT");
     }
 
     else if (strcmp(cmd, "SET") == 0)
     {
         if (!arg1 || !arg2)
         {
-            Serial.println("MSG: SYNTAX ERROR. SET <VAR> <VALUE>");
+            Serial1.println("MSG: SYNTAX ERROR. USE: SET <VAR> <VALUE>");
             return;
         }
 
-        float val = atof(arg2);
+        bool found = false;
 
-        if (strcmp(arg1, "PITCH_KP") == 0)
+        for (size_t i = 0; i < NUM_CONFIG_ENTRIES; i++)
         {
-            config.pid_pitch.kp = val;
-            Serial.printf("MSG: PITCH_KP %.3f\n", config.pid_pitch.kp);
-        }
-        else if (strcmp(arg1, "PITCH_KI") == 0)
-        {
-            config.pid_pitch.ki = val;
-            Serial.printf("MSG: PITCH_KI %.3f\n", config.pid_pitch.ki);
-        }
-        else if (strcmp(arg1, "PITCH_KD") == 0)
-        {
-            config.pid_pitch.kd = val;
-            Serial.printf("MSG: PITCH_KD %.3f\n", config.pid_pitch.kd);
-        }
+            if (strcmp(arg1, config_table[i].name) == 0)
+            {
 
-        else if (strcmp(arg1, "ROLL_KP") == 0)
-        {
-            config.pid_roll.kp = val;
-            Serial.printf("MSG: ROLL_KP %.3f\n", config.pid_roll.kp);
-        }
-        else if (strcmp(arg1, "ROLL_KI") == 0)
-        {
-            config.pid_roll.ki = val;
-            Serial.printf("MSG: ROLL_KI %.3f\n", config.pid_roll.ki);
-        }
-        else if (strcmp(arg1, "ROLL_KD") == 0)
-        {
-            config.pid_roll.kd = val;
-            Serial.printf("MSG: ROLL_KD %.3f\n", config.pid_roll.kd);
-        }
+                if (config_table[i].type == T_F32)
+                {
+                    *(float *)config_table[i].ptr = atof(arg2);
+                    Serial1.printf("MSG: %s = %.3f\n", config_table[i].name, *(float *)config_table[i].ptr);
+                }
+                else if (config_table[i].type == T_U32)
+                {
+                    *(uint32_t *)config_table[i].ptr = strtoul(arg2, NULL, 10);
+                    Serial1.printf("MSG: %s = %lu\n", config_table[i].name, *(uint32_t *)config_table[i].ptr);
+                }
+                else if (config_table[i].type == T_BOOL)
+                {
+                    *(bool *)config_table[i].ptr = atoi(arg2) > 0;
+                    Serial1.printf("MSG: %s = %d\n", config_table[i].name, *(bool *)config_table[i].ptr);
+                }
 
-        else if (strcmp(arg1, "YAW_KP") == 0)
-        {
-            config.pid_yaw.kp = val;
-            Serial.printf("MSG: YAW_KP %.3f\n", config.pid_yaw.kp);
+                found = true;
+                break;
+            }
         }
-        else if (strcmp(arg1, "YAW_KI") == 0)
-        {
-            config.pid_yaw.ki = val;
-            Serial.printf("MSG: YAW_KI %.3f\n", config.pid_yaw.ki);
-        }
-        else if (strcmp(arg1, "YAW_KD") == 0)
-        {
-            config.pid_yaw.kd = val;
-            Serial.printf("MSG: YAW_KD %.3f\n", config.pid_yaw.kd);
-        }
-
-        else if (strcmp(arg1, "SERVO_CENTER") == 0)
-        {
-            config.servo_center_us = val;
-            Serial.printf("MSG: SERVO_CENTER %.1f\n", config.servo_center_us);
-        }
-        else if (strcmp(arg1, "SERVO_LIMIT") == 0)
-        {
-            config.servo_limit_max_deg = val;
-            Serial.printf("MSG: SERVO_LIMIT %.1f\n", config.servo_limit_max_deg);
-        }
-
-        else if (strcmp(arg1, "MOTOR_BURN_MS") == 0)
-        {
-            config.motor_burn_time_ms = (uint32_t)val;
-            Serial.printf("MSG: MOTOR_BURN_MS %lu\n", config.motor_burn_time_ms);
-        }
-
-        else if (strcmp(arg1, "CHUTE_TIMEOUT_MS_FROM_IGN") == 0)
-        {
-            config.parachute_charge_timeout_ms = (uint32_t)val;
-            Serial.printf("MSG: CHUTE_TIMEOUT_MS_FROM_IGN %lu\n", config.parachute_charge_timeout_ms);
-        }
-
-        else if (strcmp(arg1, "TELEM_RATE") == 0)
-        {
-            config.log_interval_ms = (uint32_t)val;
-            Serial.printf("MSG: TELEM_RATE %lu\n", config.log_interval_ms);
-        }
-        else if (strcmp(arg1, "TELEM_FLUSH_RATE") == 0)
-        {
-            config.log_flush_interval_ms = (uint32_t)val;
-            Serial.printf("MSG: FLUSH_RATE %lu\n", config.log_flush_interval_ms);
-        }
-
-        else if (strcmp(arg1, "SERVO_BURN_EN") == 0)
-        {
-            config.en_servo_in_burn = ((uint32_t)val == 0 ? false : true);
-            Serial.printf("MSG: SERVO_BURN_EN %d\n", config.en_servo_in_burn);
-        }
-        else if (strcmp(arg1, "TEST_MODE_EN") == 0)
-        {
-            config.test_mode_en = ((uint32_t)val == 0 ? false : true);
-            Serial.printf("MSG: TEST_MODE_EN %d\n", config.test_mode_en);
-        }
-
-        else
-        {
-            Serial.println("MSG: UNKNOWN TUNEABLE VARIABLE");
-        }
+        if (!found)
+            Serial1.println("MSG: UNKNOWN TUNEABLE VARIABLE");
     }
 
     else if (strcmp(cmd, "DUMP") == 0)
     {
 
-        Serial.printf("CFG: PITCH_KP %.3f\n", config.pid_pitch.kp);
-        Serial.printf("CFG: PITCH_KI %.3f\n", config.pid_pitch.ki);
-        Serial.printf("CFG: PITCH_KD %.3f\n", config.pid_pitch.kd);
-
-        Serial.printf("CFG: ROLL_KP %.3f\n", config.pid_roll.kp);
-        Serial.printf("CFG: ROLL_KI %.3f\n", config.pid_roll.ki);
-        Serial.printf("CFG: ROLL_KD %.3f\n", config.pid_roll.kd);
-
-        Serial.printf("CFG: YAW_KP %.3f\n", config.pid_yaw.kp);
-        Serial.printf("CFG: YAW_KI %.3f\n", config.pid_yaw.ki);
-        Serial.printf("CFG: YAW_KD %.3f\n", config.pid_yaw.kd);
-
-        Serial.printf("CFG: PID_I_MAX %.3f\n", config.pid_i_max);
-
-        Serial.printf("CFG: SERVO_CENTER %.1f\n", config.servo_center_us);
-        Serial.printf("CFG: SERVO_LIMIT %.1f\n", config.servo_limit_max_deg);
-        Serial.printf("CFG: SERVO_US_PER_DEG %.1f\n", config.servo_us_per_deg);
-
-        Serial.printf("CFG: MOTOR_BURN_MS %lu\n", config.motor_burn_time_ms);
-        Serial.printf("CFG: CHUTE_TIMEOUT_MS_FROM_IGN %lu\n", config.parachute_charge_timeout_ms);
-
-        Serial.printf("CFG: TELEM_RATE %lu\n", config.log_interval_ms);
-        Serial.printf("CFG: TELEM_FLUSH_RATE %lu\n", config.log_flush_interval_ms);
-        Serial.printf("CFG: TEST_MODE_EN %d\n", config.test_mode_en);
-        Serial.printf("CFG: SERVO_BURN_EN %d\n", config.en_servo_in_burn);
+        for (size_t i = 0; i < NUM_CONFIG_ENTRIES; i++)
+        {
+            if (config_table[i].type == T_F32)
+            {
+                Serial1.printf("CFG: %s %.3f\n", config_table[i].name, *(float *)config_table[i].ptr);
+            }
+            else if (config_table[i].type == T_U32)
+            {
+                Serial1.printf("CFG: %s %lu\n", config_table[i].name, *(uint32_t *)config_table[i].ptr);
+            }
+            else if (config_table[i].type == T_BOOL)
+            {
+                Serial1.printf("CFG: %s %d\n", config_table[i].name, *(bool *)config_table[i].ptr);
+            }
+        }
     }
 
     else if (strcmp(cmd, "SAVE") == 0)
     {
         config_save();
-        Serial.println("MSG: CONFIG SAVED TO EEPROM");
+        Serial1.println("MSG: CONFIG SAVED TO EEPROM");
     }
 
     else if (strcmp(cmd, "DEFAULT") == 0)
     {
         config_set_defaults();
         config_save();
-        Serial.println("MSG: EEPROM RESET TO DEFAULTS");
+        Serial1.println("MSG: EEPROM RESET TO DEFAULTS");
     }
 
     else if (strcmp(cmd, "MAGICRESET") == 0)
@@ -220,15 +186,15 @@ static void cmd_processor(char *cmd_str, FltStates_t *state)
 
     else
     {
-        Serial.println("MSG: UNKNOWN COMMAND");
+        Serial1.println("MSG: UNKNOWN COMMAND");
     }
 }
 
 void comms_read_cmd(FltStates_t *state)
 {
-    while (Serial.available())
+    while (Serial1.available())
     {
-        char c = Serial.read();
+        char c = Serial1.read();
 
         if (c == '\n' || c == '\r')
         {

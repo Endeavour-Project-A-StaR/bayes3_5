@@ -21,15 +21,15 @@ void setup()
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
 
-  Serial.begin(0); // ACM doesnt need baud rate
+  Serial1.begin(38400);
 
   Wire.begin();
   Wire.setClock(1000000);
 
-  while (!Serial.available())
+  while (!Serial1.available())
     delay(1);
 
-  Serial.println("RACS Development Booting Up");
+  Serial1.println("RACS Development Booting Up");
 
   config_init();
 
@@ -40,32 +40,32 @@ void setup()
   if (!imu_init())
     while (1)
       delay(1);
-  Serial.println("MSG: IMU INIT SUCCESS");
+  Serial1.println("MSG: IMU INIT SUCCESS");
 
   if (!baro_init())
     while (1)
       delay(1);
-  Serial.println("MSG: BARO INIT SUCCESS");
+  Serial1.println("MSG: BARO INIT SUCCESS");
 
   servo_init(&fltdata);
 
-  Serial.println("MSG: WILL TEST SERVO");
+  Serial1.println("MSG: WILL TEST SERVO");
 
   servo_swing_test();
 
-  Serial.println("MSG: SERVO RECENTERED");
+  Serial1.println("MSG: SERVO RECENTERED");
 
-  Serial.println("MSG: GYRO CAL IN 5 SEC");
+  Serial1.println("MSG: GYRO CAL IN 5 SEC");
   delay(5000);
   imu_cal_gyro(&fltdata);
 
-  Serial.println("MSG: BAYES READY");
+  Serial1.println("MSG: BAYES READY");
 
   nav_rst_integral();
 
   state = STATE_PREFLT;
 
-  Serial.println("MSG: The rocket knows where it is at all times.");
+  Serial1.println("MSG: The rocket knows where it is at all times.");
 
   digitalWrite(LED_BUILTIN, HIGH);
 
@@ -100,7 +100,7 @@ void loop()
         {
           state = STATE_BURN;
           burn_start = millis();
-          Serial.println("MSG: LIFTOFF");
+          Serial1.println("MSG: LIFTOFF");
         }
         break;
 
@@ -114,7 +114,7 @@ void loop()
         if ((millis() - burn_start) >= config.motor_burn_time_ms)
         {
           state = STATE_COAST;
-          Serial.println("MSG: BURN TIMER EXPIRED, UNLOCKING FINS");
+          Serial1.println("MSG: BURN TIMER EXPIRED, UNLOCKING FINS");
         }
 
         break;
@@ -127,7 +127,7 @@ void loop()
         if ((millis() - burn_start) >= config.parachute_charge_timeout_ms)
         {
           state = STATE_RECVY;
-          Serial.println("MSG: PARACHUTE DELAY CHARGE TIMER EXPIRED, DISABLING CONTROL");
+          Serial1.println("MSG: PARACHUTE DELAY CHARGE TIMER EXPIRED, DISABLING CONTROL");
         }
 
         break;
@@ -165,10 +165,6 @@ void loop()
       }
 
       comms_send_telem(state, &fltdata);
-    }
-    else
-    {
-      Serial.println("MSG: IMU READ FAIL");
     }
   }
 

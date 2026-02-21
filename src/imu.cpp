@@ -55,7 +55,7 @@ void imu_cal_gyro(FltData_t *fltdata)
     float sign_flip = config.test_mode_en ? -1.0f : 1.0f;
 
     if (sign_flip != 1.0f)
-        Serial.println("MSG: INVERTED TEST MODE ENABLED");
+        Serial1.println("MSG: INVERTED TEST MODE ENABLED");
 
     fltdata->gyro_bias[0] = (s_x / smps) * sign_flip;
     fltdata->gyro_bias[1] = s_y / smps;

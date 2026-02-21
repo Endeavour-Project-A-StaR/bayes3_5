@@ -31,20 +31,20 @@ bool log_init()
 {
     if (sd_init())
     {
-        Serial.println("MSG: SD INIT SUCCESS");
+        Serial1.println("MSG: SD INIT SUCCESS");
         if (logfile_init())
         {
-            Serial.println("MSG: LOG FILE CREATED");
+            Serial1.println("MSG: LOG FILE CREATED");
         }
         else
         {
-            Serial.println("MSG: LOG FILE CREATION FAILED");
+            Serial1.println("MSG: LOG FILE CREATION FAILED");
             return false;
         }
     }
     else
     {
-        Serial.println("MSG: SD INIT FAILED");
+        Serial1.println("MSG: SD INIT FAILED");
         return false;
     }
     return true;

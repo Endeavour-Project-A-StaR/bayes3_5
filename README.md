@@ -5,7 +5,7 @@ Flight computer software to hold rockets upright
 
 # TODO (As of 0300 20 Feb):
 - [x] Ground Test Mode
-- [ ] Switch serial to bluetooth
+- [x] Switch serial to bluetooth
 - [x] Add soft reboot and safe guards
 - [x] Add switch to disable fin during burn
 - [x] Add logging to SD card

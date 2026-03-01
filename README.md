@@ -7,6 +7,7 @@ Flight computer software to hold rockets upright
 - [ ] Implement sensor init retry and error handling
 - [ ] Improve liftoff detection logic
 - [ ] Implement runtime error handling
+- [ ] Add watchdog 
 - [x] Ground Test Mode
 - [x] Switch serial to bluetooth
 - [x] Add soft reboot and safe guards
@@ -17,5 +18,3 @@ Flight computer software to hold rockets upright
 - [x] Move PID constants and tunables to EEPROM
 - [x] Ground station software
 - [x] Enable tuning from ground station SW
-- [ ] Add watchdog? 
-- [ ] ~~ Add filter for servo? ~~

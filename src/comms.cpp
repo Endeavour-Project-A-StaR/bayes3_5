@@ -60,7 +60,7 @@ const size_t NUM_CONFIG_ENTRIES = sizeof(config_table) / sizeof(config_table[0])
 void comms_send_telem(FltStates_t state, FltData_t *fltdata)
 {
     if ((state == STATE_OVRD || state == STATE_PREFLT) &&
-        (millis() - last_print_time >= 50))
+        (millis() - last_print_time >= 100))
     {
         last_print_time = millis();
 
@@ -70,8 +70,8 @@ void comms_send_telem(FltStates_t state, FltData_t *fltdata)
 
         if (len > 0 && (size_t)len < sizeof(ser_buf))
         {
-            if (Serial.availableForWrite() >= (len + 4))
-                Serial.println(ser_buf);
+            // if (Serial1.availableForWrite() >= (len + 4))
+            Serial1.println(ser_buf);
         }
     }
 }

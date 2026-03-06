@@ -9,32 +9,34 @@
 #include "comms.h"
 #include "baro.h"
 
+#define INIT_MAX_RETRIES 3
+
 FltStates_t state = STATE_DIAG; // Default startup to self test
 FltData_t fltdata;              // Init shared flight data struct
 
-uint32_t last_loop_time;
-uint32_t burn_start;
+uint32_t last_loop_time; // last flight loop run timestamp
+uint32_t burn_start;     // Ignition timestamp
 
 void setup()
 {
 
   pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, LOW);
+  digitalWrite(LED_BUILTIN, LOW); // onboard led will be turned on after successful initialization
 
-  Serial.begin(0);
-  Serial1.begin(38400);
+  Serial.begin(0);      // USB ACM Serial, doesnt need baud rate
+  Serial1.begin(38400); // Bluetooth serial
 
   Wire.begin();
-  Wire.setClock(1000000);
+  Wire.setClock(1000000); // Use 1MHz fast mode plus I2C (IMU needs fast readout)
 
-  while (!Serial1.available())
+  while (!Serial1.available()) // Stall until wakeup command
     delay(1);
 
   Serial1.println("RACS Development Booting Up");
 
-  config_init();
+  config_init(); // check EEPROM config integrity
 
-  if (!log_init())
+  if (!log_init()) // initialize sd card and logfile
     while (1)
       delay(1);
 
@@ -48,7 +50,7 @@ void setup()
       delay(1);
   Serial1.println("MSG: BARO INIT SUCCESS");
 
-  servo_init(&fltdata);
+  servo_init(&fltdata); // initialize and center servos in fltdata
 
   Serial1.println("MSG: WILL TEST SERVO");
 
@@ -58,11 +60,11 @@ void setup()
 
   Serial1.println("MSG: GYRO CAL IN 3 SEC");
   delay(3000);
-  imu_cal_gyro(&fltdata);
+  imu_cal_gyro(&fltdata); // gyro bias calibration, 500 smps averaged
 
   Serial1.println("MSG: BAYES READY");
 
-  nav_rst_integral();
+  nav_rst_integral(); // reset integral in all PID controllers
 
   state = STATE_PREFLT;
 

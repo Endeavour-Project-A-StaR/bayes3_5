@@ -7,7 +7,7 @@ from matplotlib.widgets import Button
 from scipy.spatial.transform import Rotation as R
 
 # --- CONFIGURATION ---
-SERIAL_PORT = '/dev/ttyACM0'  # Change this to your Teensy's serial port!
+SERIAL_PORT = '/dev/rfcomm0'  # Change this to your Teensy's serial port!
 BAUD_RATE = 115200
 
 # Connect to the flight computer

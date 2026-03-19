@@ -87,10 +87,10 @@ void nav_update_pid(FltData_t *fltdata, float dt)
     // are physically mounted (e.g. horn pointing forward vs backward).
     // If a pair moves backwards during your push test, just flip the signs for that pair!
 
-    float m1 = out_pitch + out_roll;  // Top
-    float m2 = out_yaw + out_roll;    // Right
-    float m3 = -out_pitch + out_roll; // Bottom
-    float m4 = -out_yaw + out_roll;   // Left
+    float m1 = out_pitch - out_roll;  // Top
+    float m2 = out_yaw - out_roll;    // Right
+    float m3 = -out_pitch - out_roll; // Bottom
+    float m4 = -out_yaw - out_roll;   // Left
 
     // 4. APPLY LIMITS & CENTER OFFSET
     fltdata->servo_out[0] = SERVO_CENTER + constrain_f(m1, -config.servo_limit_max_deg, config.servo_limit_max_deg);

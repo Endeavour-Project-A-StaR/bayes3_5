@@ -38,17 +38,17 @@ void servo_init(FltData_t *fltdata)
 
 void servo_swing_test()
 {
-    for (int pos = 90; pos <= 135; pos++)
+    for (int pos = 90; pos <= 110; pos++)
     {
         servo_swing_test_deg2us(pos);
         delay(20);
     }
-    for (int pos = 135; pos >= 45; pos--)
+    for (int pos = 110; pos >= 70; pos--)
     {
         servo_swing_test_deg2us(pos);
         delay(20);
     }
-    for (int pos = 45; pos <= 90; pos++)
+    for (int pos = 70; pos <= 90; pos++)
     {
         servo_swing_test_deg2us(pos);
         delay(20);

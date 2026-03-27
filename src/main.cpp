@@ -10,6 +10,7 @@
 #include "baro.h"
 
 #define INIT_MAX_RETRIES 3
+#define I2C_SPEED_FMPLUS 1000000
 
 FltStates_t state = STATE_DIAG; // Default startup to self test
 FltData_t fltdata;              // Init shared flight data struct
@@ -27,7 +28,7 @@ void setup()
   Serial1.begin(38400); // Bluetooth serial
 
   Wire.begin();
-  Wire.setClock(1000000); // Use 1MHz fast mode plus I2C (IMU needs fast readout)
+  Wire.setClock(I2C_SPEED_FMPLUS); // Use 1MHz fast mode plus I2C (IMU needs fast readout)
 
   while (!Serial1.available()) // Stall until wakeup command
     delay(1);
